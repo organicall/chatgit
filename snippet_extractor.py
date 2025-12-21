@@ -5,9 +5,16 @@ from difflib import SequenceMatcher
 class ImprovedCodeSnippetExtractor:
     """Enhanced code snippet extractor with better accuracy"""
     
-    def __init__(self, repo_path):
+    # Configurable thresholds
+    DEFAULT_SIMILARITY = 0.80  # General matching threshold
+    HIGH_CONFIDENCE = 0.90     # High confidence threshold
+    HINT_FILE_SIMILARITY = 0.75  # Lower threshold for hint files
+    MIN_SNIPPET_LINES = 2      # Minimum lines for matching
+    
+    def __init__(self, repo_path, similarity_threshold=None):
         self.repo_path = Path(repo_path)
         self.file_cache = {}
+        self.similarity_threshold = similarity_threshold or self.DEFAULT_SIMILARITY
     
     def load_file(self, file_path):
         """Load and cache file contents"""
@@ -96,14 +103,18 @@ class ImprovedCodeSnippetExtractor:
                 # Calculate similarity
                 similarity = self.calculate_similarity(snippet_lines, window_lines)
                 
-                # Only consider matches above 80% similarity
-                if similarity >= 0.80:
+                # Adaptive threshold: lower for hint files, use configured threshold otherwise
+                is_hint_file = file_hint and str(file_path.relative_to(self.repo_path)) == file_hint
+                threshold = self.HINT_FILE_SIMILARITY if is_hint_file else self.similarity_threshold
+                
+                # Only consider matches above threshold
+                if similarity >= threshold:
                     candidates.append({
                         'file': str(file_path.relative_to(self.repo_path)),
                         'start_line': i + 1,
                         'end_line': i + len(snippet_lines),
                         'confidence': similarity,
-                        'is_hint_file': file_hint and str(file_path.relative_to(self.repo_path)) == file_hint
+                        'is_hint_file': is_hint_file
                     })
         
         # Sort candidates: prioritize hint file, then by confidence

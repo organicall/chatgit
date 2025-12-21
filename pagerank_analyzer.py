@@ -270,27 +270,37 @@ class CodePageRankAnalyzer:
         return []
     
     def _add_function_call_edge(self, caller_full_name, called_func_name, current_file):
-        """Add edge between caller and callee functions with smart resolution"""
-        # Strategy 1: Look for function in same file first
+        """Add edge between caller and callee with pragmatic heuristic resolution"""
+        # Strategy 1: Same file (highest confidence)
         same_file_target = f"{current_file}::{called_func_name}"
         if same_file_target in self.function_graph.nodes():
             self.function_graph.add_edge(caller_full_name, same_file_target)
             return
         
-        # Strategy 2: Look up in our function name mapping
+        # Strategy 2: Function name mapping with file proximity
         if called_func_name in self.function_name_to_full:
             candidates = self.function_name_to_full[called_func_name]
             
-            # If only one candidate, use it
             if len(candidates) == 1:
+                # Only one match - high confidence
                 self.function_graph.add_edge(caller_full_name, candidates[0])
                 return
             
-            # If multiple candidates, prefer the one in same file or closest file
-            # For now, just use the first one (could be improved with import analysis)
-            if candidates:
-                self.function_graph.add_edge(caller_full_name, candidates[0])
-                return
+            # Multiple candidates - prefer functions in nearby files (same directory)
+            caller_dir = str(Path(current_file).parent)
+            for candidate in candidates:
+                candidate_file = candidate.split('::')[0]
+                candidate_dir = str(Path(candidate_file).parent)
+                
+                if candidate_dir == caller_dir:
+                    # Same directory - higher confidence
+                    self.function_graph.add_edge(caller_full_name, candidate)
+                    return
+            
+            # No same-directory match - add edges to top 3 candidates with lower weight
+            # This helps PageRank but acknowledges uncertainty
+            for candidate in candidates[:3]:
+                self.function_graph.add_edge(caller_full_name, candidate, weight=0.3)
     
     def _add_import_edge(self, from_file, to_module):
         """Add edge for import relationship"""
@@ -334,30 +344,29 @@ class CodePageRankAnalyzer:
             self.file_graph.add_edge(from_file, to_module)
     
     def get_file_pagerank(self):
-        """Calculate PageRank for files"""
+        """Calculate PageRank for files - returns ONLY actual code files, never modules"""
         if len(self.file_graph.nodes()) == 0:
             return []
         
         try:
             pagerank = nx.pagerank(self.file_graph, alpha=0.85)
             
-            # Filter to only include actual file paths
-            file_extensions = {'.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.cpp', '.c', '.h', '.go', '.rs', '.md', '.txt'}
-            filtered_pagerank = {
+            # STRICT filtering - only actual code files
+            CODE_EXTENSIONS = {'.py', '.js', '.jsx', '.ts', '.tsx', '.java', 
+                              '.cpp', '.c', '.h', '.hpp', '.swift'}
+            
+            file_pagerank = {
                 node: score for node, score in pagerank.items()
-                if any(node.endswith(ext) for ext in file_extensions) or '/' in node
+                if any(node.endswith(ext) for ext in CODE_EXTENSIONS)
             }
             
-            # If filtering removed everything, return top unfiltered results (excluding obvious modules)
-            if not filtered_pagerank:
-                known_modules = {'os', 'sys', 're', 'json', 'ast', 'pathlib', 'collections', 'numpy', 'pandas', 'torch', 'flask', 'django'}
-                filtered_pagerank = {
-                    node: score for node, score in pagerank.items()
-                    if node not in known_modules
-                }
-                print(f"[PageRank] Warning: No files matched extension filter, returning {len(filtered_pagerank)} unfiltered results")
+            # If no results, something is wrong with the graph
+            if not file_pagerank:
+                print(f"[PageRank] Warning: No code files found in file_graph. Graph has {len(self.file_graph.nodes())} nodes.")
+                print(f"[PageRank] Sample nodes: {list(self.file_graph.nodes())[:10]}")
+                return []
             
-            return sorted(filtered_pagerank.items(), key=lambda x: x[1], reverse=True)
+            return sorted(file_pagerank.items(), key=lambda x: x[1], reverse=True)
         except Exception as e:
             print(f"[PageRank] Error calculating file pagerank: {e}")
             return []

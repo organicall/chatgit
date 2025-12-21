@@ -28,6 +28,15 @@ from pagerank_analyzer import CodePageRankAnalyzer
 
 load_dotenv()
 
+# Initialize tokenizer for accurate token counting
+try:
+    import tiktoken
+    TOKENIZER = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    print("Tokenizer initialized successfully")
+except Exception as e:
+    TOKENIZER = None
+    print(f"Warning: tiktoken not available ({e}), using fallback token estimation")
+
 # --- Request/Response Models ---
 class RepositoryLoadSchema(BaseModel):
     github_url: str
@@ -69,6 +78,25 @@ def initialize_llm():
         print("Warning: GROQ_API_KEY missing.")
         return None
     return Groq(api_key=key)
+
+def determine_temperature(query: str) -> float:
+    """Determine appropriate temperature based on query type"""
+    query_lower = query.lower()
+    
+    # Higher temp for creative/explanatory queries
+    creative_keywords = ['explain', 'how', 'why', 'what if', 'suggest', 'recommend', 
+                         'describe', 'compare', 'difference between', 'best way']
+    
+    # Lower temp for factual/lookup queries  
+    factual_keywords = ['find', 'show', 'where', 'which file', 'locate', 
+                        'what does', 'list', 'get']
+    
+    if any(kw in query_lower for kw in creative_keywords):
+        return 0.3  # More creative
+    elif any(kw in query_lower for kw in factual_keywords):
+        return 0.1  # More deterministic
+    
+    return 0.2  # Default middle ground
 
 def initialize_embedder():
     model = load_embedding_model(device="cpu")
@@ -138,7 +166,36 @@ async def ingest_repository(payload: RepositoryLoadSchema):
         
     try:
         workspace = Path.home() / "Documents" / "github_repos"
-        workspace.mkdir(parents=True, exist_ok=True)
+        
+        # Validate workspace - check write permissions
+        try:
+            workspace.mkdir(parents=True, exist_ok=True)
+            # Test write permissions
+            test_file = workspace / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+        except PermissionError:
+            raise HTTPException(
+                status_code=500, 
+                detail="Cannot write to workspace directory. Check permissions."
+            )
+        except OSError as e:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Filesystem error: {str(e)}"
+            )
+        
+        # Check disk space (require at least 100MB free)
+        try:
+            stats = shutil.disk_usage(workspace)
+            if stats.free < 100 * 1024 * 1024:  # Less than 100MB
+                raise HTTPException(
+                    status_code=507,
+                    detail="Insufficient disk space (need at least 100MB free)"
+                )
+        except Exception as e:
+            print(f"Warning: Could not check disk space: {e}")
+        
         target_path = workspace / project
         
         if not target_path.exists():
@@ -474,9 +531,14 @@ async def process_chat(payload: MessagePayload):
                 
                 file_block.append(f"```\n{content}\n```")
             
-            # Check token budget
+            # Check token budget with proper token counting
             block_text = "\n".join(file_block)
-            est_tokens = len(block_text) // 4
+            
+            # Use tiktoken if available, otherwise use more conservative fallback
+            if TOKENIZER:
+                est_tokens = len(TOKENIZER.encode(block_text))
+            else:
+                est_tokens = len(block_text) // 3  # More conservative than //4
             
             if token_count + est_tokens < limit:
                 context_blocks.append(block_text)
@@ -536,10 +598,13 @@ Answer the query clearly and accurately:"""
             }
         ]
         
+        # Determine appropriate temperature based on query type
+        temp = determine_temperature(query)
+        
         completion = session.llm_client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=chat_messages,
-            temperature=0.1,  # Lower temperature for more factual responses
+            temperature=temp,
             max_tokens=2048,
             stream=False
         )

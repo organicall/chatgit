@@ -385,11 +385,26 @@ def generate_repo_ast(repo_path):
                     'type': os.path.splitext(file)[1][1:] or 'unknown'
                 }
     
+    # Only count actual code files, not documentation or error files
+    CODE_TYPES = {'python', 'javascript', 'java', 'cpp', 'swift'}
+    code_files = [f for f in repo_summary['files'].values() 
+                  if f.get('type') in CODE_TYPES]
+    
+    # Count unique imported modules (not individual import statements)
+    # e.g., "from x import a, b, c" should count as 1 import, not 3
+    unique_modules = set()
+    for imp in repo_summary['imports']:
+        module = imp.get('module', '')
+        # Extract base module name (before the dot)
+        base_module = module.split('.')[0] if module else ''
+        if base_module:
+            unique_modules.add(base_module)
+    
     repo_summary['stats'] = {
-        'total_files': len(repo_summary['files']),
+        'total_files': len(code_files),
         'total_functions': len(repo_summary['functions']),
         'total_classes': len(repo_summary['classes']),
-        'total_imports': len(repo_summary['imports'])
+        'total_imports': len(unique_modules)
     }
     
     return repo_summary
