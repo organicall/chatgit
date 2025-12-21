@@ -31,8 +31,10 @@ load_dotenv()
 # Initialize tokenizer for accurate token counting
 try:
     import tiktoken
-    TOKENIZER = tiktoken.encoding_for_model("gpt-3.5-turbo")
-    print("Tokenizer initialized successfully")
+    # Use cl100k_base encoding which is closer to Llama tokenizers
+    # Note: We're using Groq's llama-3.1-8b-instant, not GPT-3.5
+    TOKENIZER = tiktoken.get_encoding("cl100k_base")
+    print("Tokenizer initialized successfully (cl100k_base)")
 except Exception as e:
     TOKENIZER = None
     print(f"Warning: tiktoken not available ({e}), using fallback token estimation")
@@ -49,7 +51,7 @@ class RepoStatistics(BaseModel):
     total_files: int
     total_functions: int
     total_classes: int
-    total_imports: int
+    total_packages: int  # Changed from total_imports - counts unique packages/libraries
 
 # --- Global Context ---
 class ServerContext:
@@ -245,6 +247,7 @@ async def ingest_repository(payload: RepositoryLoadSchema):
 - Files: {stats.get('total_files', 0)}
 - Functions: {stats.get('total_functions', 0)}
 - Classes: {stats.get('total_classes', 0)}
+- Packages: {stats.get('total_packages', 0)}
 
 **Key Functions:**
 {func_list}
@@ -534,9 +537,10 @@ async def process_chat(payload: MessagePayload):
             # Check token budget with proper token counting
             block_text = "\n".join(file_block)
             
-            # Use tiktoken if available, otherwise use more conservative fallback
+            # Use tiktoken if available, with 20% buffer for Llama tokenizer differences
             if TOKENIZER:
-                est_tokens = len(TOKENIZER.encode(block_text))
+                base_tokens = len(TOKENIZER.encode(block_text))
+                est_tokens = int(base_tokens * 1.2)  # 20% safety buffer
             else:
                 est_tokens = len(block_text) // 3  # More conservative than //4
             
@@ -566,6 +570,7 @@ async def process_chat(payload: MessagePayload):
 - Total Files: {stats.get('total_files', 0)}
 - Total Functions: {stats.get('total_functions', 0)}
 - Total Classes: {stats.get('total_classes', 0)}
+- Total Packages: {stats.get('total_packages', 0)}
 
 ## Retrieved Files
 {file_index}

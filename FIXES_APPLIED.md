@@ -7,16 +7,23 @@ Applied pragmatic fixes to 9 critical issues identified in the codebase. These f
 
 ## ✅ **Priority 1: Token Counting (#11)** - CRITICAL
 **Problem:** Rough character-based estimation (`len(text) // 4`) could overflow context window
+**Additional Issue:** Was using GPT-3.5 tokenizer but model is Llama-based
 
 **Solution:**
 - Added `tiktoken>=0.5.0` to requirements.txt
 - Initialized tokenizer at module level in `api.py`
-- Replaced character estimation with proper token counting
+- **Use `cl100k_base` encoding** (closer to Llama tokenizers than GPT-3.5)
+- **Added 20% safety buffer** to account for tokenizer differences
 - Added conservative fallback (`len(text) // 3`) if tiktoken unavailable
 
 **Files Modified:**
 - `requirements.txt`
-- `api.py` (lines 29-38, 486-493)
+- `api.py` (lines 31-40, 492-544)
+
+**Impact:** 
+- Accurate token counting prevents context overflow
+- 20% buffer ensures safety with Llama models
+- Conservative fallback for environments without tiktoken
 
 ---
 
@@ -34,17 +41,24 @@ Applied pragmatic fixes to 9 critical issues identified in the codebase. These f
 
 ---
 
-## ✅ **Priority 3: Import Double-Counting (#2)** - CRITICAL
+## ✅ **Priority 3: Import Counting & Naming (#2)** - CRITICAL
 **Problem:** `from module import a, b, c` counted as 3 imports instead of 1
+**Additional Issue:** Name "total_imports" was misleading - it counts packages, not import statements
 
 **Solution:**
 - Count unique base module names instead of individual import items
 - Extract base module (before first dot) and use set to deduplicate
+- **Renamed `total_imports` → `total_packages`** for clarity
+- Added documentation explaining this counts unique packages/libraries
 
 **Files Modified:**
-- `rag_101/retriever.py` (lines 395-401)
+- `rag_101/retriever.py` (lines 395-412)
+- `api.py` - Updated RepoStatistics model, summary text, and chat prompt
 
-**Impact:** Import counts now match user expectations
+**Impact:** 
+- Package counts now match user expectations
+- Clear naming: "total_packages" = unique top-level packages used
+- Better communication to users about what the stats represent
 
 ---
 
