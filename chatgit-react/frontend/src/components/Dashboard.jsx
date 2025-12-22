@@ -55,8 +55,8 @@ const Dashboard = ({ metrics }) => {
                     <div className="stat-value">{metrics.total_classes?.toLocaleString()}</div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-label">IMPORTS</div>
-                    <div className="stat-value">{metrics.total_imports?.toLocaleString()}</div>
+                    <div className="stat-label">PACKAGES</div>
+                    <div className="stat-value">{metrics.total_packages?.toLocaleString()}</div>
                 </div>
             </div>
 
