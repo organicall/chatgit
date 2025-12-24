@@ -78,9 +78,18 @@ session = ServerContext()
 def initialize_llm():
     key = os.getenv("GROQ_API_KEY")
     if not key:
-        print("Warning: GROQ_API_KEY missing.")
+        print("❌ ERROR: GROQ_API_KEY not found in environment variables!")
+        print("Make sure .env file exists with: GROQ_API_KEY=your_key_here")
         return None
-    return Groq(api_key=key)
+    
+    try:
+        print(f"✓ GROQ_API_KEY loaded (length: {len(key)} chars)")
+        client = Groq(api_key=key)
+        print("✓ Groq client initialized successfully")
+        return client
+    except Exception as e:
+        print(f"❌ ERROR: Failed to initialize Groq client: {e}")
+        return None
 
 def determine_temperature(query: str) -> float:
     """Determine appropriate temperature based on query type"""
@@ -202,6 +211,7 @@ async def ingest_repository(payload: RepositoryLoadSchema):
         target_path = workspace / project
         
         if not target_path.exists():
+            # Repository doesn't exist - clone it
             print(f"Cloning {url}...")
             proc = subprocess.run(
                 ["git", "clone", url, str(target_path)],
@@ -211,6 +221,21 @@ async def ingest_repository(payload: RepositoryLoadSchema):
             )
             if proc.returncode != 0:
                 raise Exception(f"Git failed: {proc.stderr}")
+        else:
+            # Repository exists - pull latest changes
+            print(f"Repository already exists. Pulling latest changes from {url}...")
+            proc = subprocess.run(
+                ["git", "-C", str(target_path), "pull"],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            if proc.returncode != 0:
+                print(f"Warning: Git pull failed: {proc.stderr}")
+                print("Using existing local version (may be outdated)")
+            else:
+                print("✓ Repository updated with latest changes")
+        
         
         print("Reading files...")
         reader = SimpleDirectoryReader(
