@@ -1,7 +1,5 @@
 # chatGIT code explanation
 
-this file explains what's happening in the codebase in simple terms
-
 ## high-level overview
 
 chatGIT is a code analysis tool that combines:

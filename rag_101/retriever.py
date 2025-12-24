@@ -33,7 +33,8 @@ def _parse_javascript_typescript(content, file_path):
     ]
     
     for pattern in func_patterns:
-        matches = re.finditer(pattern, content, re.MULTILINE)
+        #scans the file and matches the pattern
+        matches = re.finditer(pattern, content, re.MULTILINE) 
         for match in matches:
             line_num = content[:match.start()].count('\n') + 1
             functions.append({

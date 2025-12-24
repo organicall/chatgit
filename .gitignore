@@ -7,6 +7,7 @@ weights/
 .cache/
 .ollama/
 .lightning_studio/
+
 # Logs and data that don't need to be shared
 log/
 nltk_data/
@@ -27,11 +28,9 @@ __pycache__/
 # Operating system generated files
 .DS_Store
 Thumbs.db
+.wget-hsts
 
 # Virtual environment
 venv/
 env/
-.env
-.env
-.env
 .env
