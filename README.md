@@ -2,7 +2,7 @@
 
 **AI-Powered Code Analysis & Chat Interface for GitHub Repositories**
 
-ChatGIT is an intelligent code analysis tool that lets you have natural language conversations with your codebase. Using advanced RAG (Retrieval Augmented Generation), PageRank algorithms, and multi-language AST parsing, ChatGIT helps you understand, navigate, and analyze any GitHub repository.
+ChatGIT is an intelligent code analysis tool that lets you have natural language conversations with your codebase. Using advanced RAG (Retrieval Augmented Generation), PageRank algorithms, and multi-language AST parsing, LLM helps you understand, navigate, and analyze any GitHub repository.
 
 ---
 
@@ -44,7 +44,7 @@ ChatGIT uses a sophisticated pipeline:
 - **Python 3.12+**
 - **Node.js 18+**
 - **Git**
-- **Groq API Key** (get one free at [console.groq.com](https://console.groq.com))
+- **Groq API Key** 
 
 ### Step 1: Clone the Repository
 
@@ -96,8 +96,6 @@ npm run dev
 
 Open your browser and go to:
 - **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
 
 ---
 
@@ -114,8 +112,6 @@ Open your browser and go to:
 View automatically generated insights:
 - **Statistics**: Total files, functions, classes, packages
 - **Top Files**: Most important files by PageRank score
-- **Hub Files**: Files that import many others
-- **Authority Files**: Files imported by many others
 - **Top Functions**: Most important functions
 - **Module Dependencies**: Package importance rankings
 
@@ -128,11 +124,11 @@ Ask questions like:
 - "Explain the routing logic"
 - "Find all API endpoints"
 
-ChatGIT will:
-- Retrieve relevant code snippets
-- Rank by importance using PageRank
-- Provide exact file names and line numbers
-- Give context-aware explanations
+The LLM provides intelligent, context-rich answers to your questions by:
+- Retrieving the most relevant code snippets from the repository
+- Ranking results by importance using PageRank analysis
+- Including exact file names and line numbers for easy navigation
+- Delivering context-aware explanations tailored to your query
 
 ### Step 4: Visualize Dependencies
 
@@ -231,67 +227,6 @@ chatgit/
 
 See [FINAL_STRUCTURE.md](FINAL_STRUCTURE.md) for complete details.
 
----
-
-## Development
-
-### Running Tests
-
-```bash
-# (Tests to be added in future phases)
-pytest tests/
-```
-
-### Code Formatting
-
-```bash
-# Format Python code
-black chatgit/
-
-# Lint
-flake8 chatgit/
-```
-
----
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## Documentation
-
-- **[FINAL_STRUCTURE.md](FINAL_STRUCTURE.md)**: Complete codebase structure
-- **[PHASE2_RESTRUCTURING.md](PHASE2_RESTRUCTURING.md)**: Refactoring documentation
-- **[CODE_EXPLANATION.md](CODE_EXPLANATION.md)**: Detailed code explanations
-- **[RUN_INSTRUCTIONS.md](RUN_INSTRUCTIONS.md)**: Quick start guide
-
----
-
-## Roadmap
-
-- [ ] Configuration system (`chatgit/config/`)
-- [ ] Service layer extraction (`chatgit/services/`)
-- [ ] API route splitting (`chatgit/api/routes/`)
-- [ ] Comprehensive test suite
-- [ ] Private repository support
-- [ ] Custom model support (local LLMs)
-- [ ] More languages (Go, Rust, Ruby)
-- [ ] VSCode extension
-- [ ] GitHub Actions integration
-
----
-
-## License
-
-This project is open source. See [LICENSE](LICENSE) for details.
 
 ---
 
@@ -303,35 +238,8 @@ This project is open source. See [LICENSE](LICENSE) for details.
 - **LangChain** for embeddings
 - **HuggingFace** for BGE models
 
----
+--- 
 
-## Troubleshooting
 
-### "ModuleNotFoundError: No module named 'chatgit'"
 
-Make sure you're running from the project root where the `chatgit/` package is located.
 
-### "GROQ_API_KEY missing"
-
-Create a `.env` file with your Groq API key:
-```bash
-echo "GROQ_API_KEY=your_key_here" > .env
-```
-
-### Frontend won't connect to backend
-
-Ensure the backend is running on port 8000:
-```bash
-uvicorn api:app --reload --port 8000
-```
-
----
-
-## Contact
-
-- **GitHub**: [@organicall](https://github.com/organicall)
-- **Issues**: [GitHub Issues](https://github.com/organicall/chatgit/issues)
-
----
-
-**Made with love for developers who love understanding code**
